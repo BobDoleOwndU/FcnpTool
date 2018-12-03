@@ -1,8 +1,10 @@
-# FcnpParser
-Tool for parsing MGSV/SSD fcnp files.
+# FcnpTool
+Fox Engine fcnp importer/exporter.
 
 ## Usage
-Drag and drop a fcnp file onto the tool. It will output a text file with information about the fcnp file in the same directory as the fcnp file is located.
+To convert a .fcnp to an editable .xml, drag and drop it on the tool. To convert a .xml to a .fcnp file, drag and drop a .fcnp.xml file onto the tool.
 
-**Using via command-line**:
+**Converting via command-line**:
 > FcnpParser example.fcnp
+
+> FcnpParser example.fcnp.xml

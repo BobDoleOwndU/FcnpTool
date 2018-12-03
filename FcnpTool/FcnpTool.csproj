@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{88E1A0F6-004F-42EB-BD6C-7EA39CC1DBA4}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>FcnpParser</RootNamespace>
-    <AssemblyName>FcnpParser</AssemblyName>
+    <RootNamespace>FcnpTool</RootNamespace>
+    <AssemblyName>FcnpTool</AssemblyName>
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -42,6 +42,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Fcnp.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

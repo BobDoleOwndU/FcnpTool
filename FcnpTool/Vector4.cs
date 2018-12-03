@@ -1,4 +1,6 @@
-﻿namespace FcnpParser
+﻿using System;
+
+namespace FcnpTool
 {
     public struct Vector4
     {
@@ -6,6 +8,14 @@
         public float y;
         public float z;
         public float w;
+
+        public Vector4(float x, float y, float z, float w)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = w;
+        } //constructor
 
         public float this[int index]
         {
@@ -19,10 +29,10 @@
                         return y;
                     case 2:
                         return z;
-                    case 4:
+                    case 3:
                         return w;
                     default:
-                        return -1;
+                        throw new IndexOutOfRangeException();
                 } //switch
             } //get
             set
@@ -41,6 +51,8 @@
                     case 3:
                         w = value;
                         break;
+                    default:
+                        throw new IndexOutOfRangeException();
                 } //switch
             } //set
         } //indexer
