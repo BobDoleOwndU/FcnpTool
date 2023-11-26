@@ -9,14 +9,17 @@ namespace FcnpTool
     {
         static void Main(string[] args)
         {
-            if (args.Length > 0)
+            foreach(string arg in args)
             {
-                if (Path.GetExtension(args[0]) == ".fcnp")
+                if (!File.Exists(arg))
+                    continue;
+
+                if (Path.GetExtension(arg) == ".fcnp")
                 {
-                    string outputPath = args[0] + ".xml";
+                    string outputPath = arg + ".xml";
                     XmlSerializer xmlSerializer = new XmlSerializer(typeof(Fcnp));
 
-                    using (FileStream readStream = new FileStream(args[0], FileMode.Open))
+                    using (FileStream readStream = new FileStream(arg, FileMode.Open))
                     using (FileStream xmlStream = new FileStream(outputPath, FileMode.Create))
                     {
                         try
@@ -44,12 +47,12 @@ namespace FcnpTool
                         } //catch
                     } //using
                 } //if
-                else if (Path.GetExtension(args[0]) == ".xml")
+                else if (Path.GetExtension(arg) == ".xml")
                 {
-                    string outputPath = args[0].Substring(0, args[0].LastIndexOf('.'));
+                    string outputPath = arg.Substring(0, arg.LastIndexOf('.'));
                     XmlSerializer xmlSerializer = new XmlSerializer(typeof(Fcnp));
 
-                    using (FileStream xmlStream = new FileStream(args[0], FileMode.Open))
+                    using (FileStream xmlStream = new FileStream(arg, FileMode.Open))
                     using (FileStream writeStream = new FileStream(outputPath, FileMode.Create))
                     {
                         try
@@ -76,7 +79,7 @@ namespace FcnpTool
                         } //catch
                     } //using
                 } //else if
-            } //if
+            }
         } //Main
     } //class
 } //FcnpParser

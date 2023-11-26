@@ -1,12 +1,17 @@
 ﻿using System;
+using System.Xml.Serialization;
 
 namespace FcnpTool
 {
     public struct Vector4
     {
+        [XmlAttribute]
         public float x;
+        [XmlAttribute]
         public float y;
+        [XmlAttribute]
         public float z;
+        [XmlAttribute]
         public float w;
 
         public Vector4(float x, float y, float z, float w)
