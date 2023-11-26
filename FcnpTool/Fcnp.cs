@@ -1,13 +1,17 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
+using System.Xml.Linq;
 using System.Xml.Serialization;
+using static FcnpTool.Fcnp.StringOffsetStorageManager;
 
 namespace FcnpTool
 {
     [XmlType]
     public class Fcnp
     {
-
         [XmlType]
         public class ConnectPoint
         {
@@ -101,6 +105,7 @@ namespace FcnpTool
 
         public void Write(FileStream stream)
         {
+            
             BinaryWriter writer = new BinaryWriter(stream);
 
             //header
@@ -111,15 +116,34 @@ namespace FcnpTool
             uint fileSize_offset = (uint)writer.BaseStream.Position;
             writer.WriteZeroes(4);
 
-            List<uint> Hashes_offsets = new List<uint>();
-            List<string> Strings = new List<string>();
+            StringOffsetStorageManager storageMan = new StringOffsetStorageManager();
 
             writer.WriteGeoNameHash(Name);
-            uint nameStringOffset_offset = (uint)writer.BaseStream.Position;
+            AddString(storageMan, Name);
+            AddOnWrite(writer, storageMan, Name);
             writer.WriteZeroes(4);
 
             writer.WriteZeroes(12);
 
+            int cnpIndex = 0;
+            int cnpCount = 0;
+            for (int i = 0; i < Bones.Count; i++)
+            {
+                cnpCount += Bones[i].ConnectPoints.Count;
+            }
+
+            uint[] parameter_offsets = new uint[cnpCount];
+            uint[] parameterOffsets_offset = new uint[cnpCount];
+
+            for (int i = 0; i < Bones.Count; i++)
+            {
+                for (int j = 0; j < Bones[i].ConnectPoints.Count; j++)
+                {
+                    AddString(storageMan, Bones[i].ConnectPoints[j].Name);
+                    AddString(storageMan, "Parent");
+                    AddString(storageMan, Bones[i].Name);
+                }
+            }
 
             for (int i = 0; i < Bones.Count; i++)
             {
@@ -127,14 +151,8 @@ namespace FcnpTool
                 {
                     var entry = Bones[i].ConnectPoints[j];
 
-                    if (!Strings.Contains(entry.Name))
-                    {
-                        Strings.Add(entry.Name);
-                        Hashes_offsets.Add((uint)writer.BaseStream.Position + 4);
-                    }
-
                     writer.WriteGeoNameHash(entry.Name);
-
+                    AddOnWrite(writer, storageMan, entry.Name);
                     writer.WriteZeroes(4);
 
                     writer.WriteZeroes(4);//flags
@@ -145,18 +163,18 @@ namespace FcnpTool
                     writer.WriteZeroes(8);
 
                     //previousnodeoffset
-                    if (i > 0)
+                    if (cnpIndex>0)
                         writer.Write(-96);
                     else
                         writer.Write(0);
 
                     //nextnodeoffset
-                    if (i < Bones[i].ConnectPoints.Count - 1)
+                    if (cnpIndex < cnpCount-1)
                         writer.Write(96);
                     else
                         writer.Write(0);
 
-                    //parameterOffsets_offset[i] = (uint)writer.BaseStream.Position;
+                    parameterOffsets_offset[cnpIndex] = (uint)writer.BaseStream.Position;
                     writer.WriteZeroes(4);
 
                     writer.WriteZeroes(8);
@@ -167,60 +185,79 @@ namespace FcnpTool
                         writer.Write(entry.Rotation[k]);
                     for (int k = 0; k < 4; k++)
                         writer.Write(entry.Scale[k]);
+
+                    cnpIndex++;
                 }
             }
-            /*
-             * 
-            uint[] parameterOffsets_offset;
-            uint[] parameterOffsets;
 
-            //nodes
-            for (int i = 0; i < ConnectPoints.Count; i++)
+            int paramIdx = 0;
+            for (int i = 0; i < Bones.Count; i++)
             {
-                var entry = ConnectPoints[i];
-
-                if (!Strings.Contains(entry.CnpName))
+                for (int j = 0; j < Bones[i].ConnectPoints.Count; j++) 
                 {
-                    Strings.Add(entry.CnpName);
-                    Hashes_offsets.Add((uint)writer.BaseStream.Position+4);
+                    parameter_offsets[paramIdx] = (uint)writer.BaseStream.Position;
+                    writer.BaseStream.Position = parameterOffsets_offset[paramIdx];
+                    writer.Write(parameter_offsets[paramIdx] - (parameterOffsets_offset[paramIdx] - 36));
+                    writer.BaseStream.Position = parameter_offsets[paramIdx];
+
+                    writer.Write((short)1);
+                    writer.Write((short)0);
+
+                    writer.WriteGeoNameHash("Parent");
+                    AddOnWrite(writer, storageMan, "Parent");
+                    writer.WriteZeroes(4);
+
+                    writer.WriteGeoNameHash(Bones[i].Name);
+                    AddOnWrite(writer, storageMan, Bones[i].Name);
+                    writer.WriteZeroes(4);
+
+                    paramIdx++;
                 }
-
-                writer.WriteGeoNameHash(entry.CnpName);
-
-                writer.WriteZeroes(4);
-
-                writer.WriteZeroes(4);//flags
-
-                writer.Write(48);//dataoffset
-                writer.Write(48);//datasize
-
-                writer.WriteZeroes(8);
-
-                //previousnodeoffset
-                if (i > 0)
-                    writer.Write(-96);
-                else
-                    writer.Write(0);
-
-                //nextnodeoffset
-                if (i < ConnectPoints.Count-1)
-                    writer.Write(96);
-                else
-                    writer.Write(0);
-
-                parameterOffsets_offset[i] = (uint)writer.BaseStream.Position;
-                writer.WriteZeroes(4);
-
-                writer.WriteZeroes(8);
-
-                for (int j = 0; j < 4; j++)
-                    writer.Write(entry.Translation[j]);
-                for (int j = 0; j < 4; j++)
-                    writer.Write(entry.Rotation[j]);
-                for (int j = 0; j < 4; j++)
-                    writer.Write(entry.Scale[j]);
             }
-            */
+
+            uint continueWriteOffset = (uint)writer.BaseStream.Position;
+            for (int i = 0; i < storageMan.Storages.Count; i++)
+            {
+                uint stringOffset = (uint)writer.BaseStream.Position;
+                writer.WriteCString(storageMan.Storages[i].String); writer.WriteZeroes(1);
+                continueWriteOffset = (uint)writer.BaseStream.Position;
+                for (int j = 0; j < storageMan.Storages[i].OffsetsToWriteTo.Count; j++)
+                {
+                    writer.BaseStream.Position = storageMan.Storages[i].OffsetsToWriteTo[j];
+                    writer.Write(stringOffset - storageMan.Storages[i].OffsetsToWriteTo[j] + 4);
+                }
+                writer.BaseStream.Position = continueWriteOffset;
+            }
+
+            uint fileSize = (uint)writer.BaseStream.Length;
+            writer.BaseStream.Position = fileSize_offset;
+            writer.Write(fileSize);
         } //write
+        public class StringOffsetStorageManager
+        {
+            public class StringOffsetStorage
+            {
+                public string String;
+                public ulong Offset;
+                public List<uint> OffsetsToWriteTo = new List<uint>(0);
+            }
+            public List<StringOffsetStorage> Storages = new List<StringOffsetStorage>(0);
+            public static void AddString(StringOffsetStorageManager storageMan, string name)
+            {
+                StringOffsetStorage storage = storageMan.Storages.Find(x => x.String.Equals(name));
+                if (storage == null)
+                {
+                    storage = new StringOffsetStorage
+                    {
+                        String = name
+                    };
+                    storageMan.Storages.Add(storage);
+                }
+            }
+            public static void AddOnWrite(BinaryWriter writer, StringOffsetStorageManager storageMan, string name)
+            {
+                storageMan.Storages.Find(x => x.String.Equals(name)).OffsetsToWriteTo.Add((uint)writer.BaseStream.Position);
+            }
+        }
     } //class
 } //namespace
