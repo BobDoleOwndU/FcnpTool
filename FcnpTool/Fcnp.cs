@@ -12,7 +12,7 @@ namespace FcnpTool
         public class ConnectPoint
         {
             [XmlAttribute]
-            public string CnpName;
+            public string Name;
 
             [XmlElement]
             public Vector4 Translation;
@@ -61,7 +61,7 @@ namespace FcnpTool
                 reader.BaseStream.Position += 4;
                 uint offsetToNameString = reader.ReadUInt32();
                 reader.BaseStream.Position = offsetToNode + offsetToNameString;
-                entry.CnpName = ExtensionMethods.ReadCString(reader);
+                entry.Name = ExtensionMethods.ReadCString(reader);
 
                 reader.BaseStream.Position = offsetToNode + 12;
                 uint offsetToPayload = reader.ReadUInt32();
@@ -127,13 +127,13 @@ namespace FcnpTool
                 {
                     var entry = Bones[i].ConnectPoints[j];
 
-                    if (!Strings.Contains(entry.CnpName))
+                    if (!Strings.Contains(entry.Name))
                     {
-                        Strings.Add(entry.CnpName);
+                        Strings.Add(entry.Name);
                         Hashes_offsets.Add((uint)writer.BaseStream.Position + 4);
                     }
 
-                    writer.WriteGeoNameHash(entry.CnpName);
+                    writer.WriteGeoNameHash(entry.Name);
 
                     writer.WriteZeroes(4);
 
