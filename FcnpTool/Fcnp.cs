@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Xml.Serialization;
 
 namespace FcnpTool
@@ -8,14 +7,12 @@ namespace FcnpTool
     [XmlType]
     public class Fcnp
     {
+
         [XmlType]
         public class ConnectPoint
         {
             [XmlAttribute]
             public string CnpName;
-
-            [XmlAttribute]
-            public string ParentBone;
 
             [XmlElement]
             public Vector4 Translation;
@@ -26,11 +23,20 @@ namespace FcnpTool
             [XmlElement]
             public Vector4 Scale;
         } //struct
-        [XmlElement]
+        [XmlAttribute]
         public string Name;
+        [XmlType]
+        public class Bone
+        {
+            [XmlAttribute]
+            public string Name;
+
+            [XmlArray]
+            public List<ConnectPoint> ConnectPoints = new List<ConnectPoint>(0);
+        }
 
         [XmlArray]
-        public List<ConnectPoint> ConnectPoints = new List<ConnectPoint>(0);
+        public List<Bone> Bones = new List<Bone>(0);
 
         public void Read(FileStream stream)
         {
@@ -69,9 +75,19 @@ namespace FcnpTool
                 reader.BaseStream.Position = offsetToNode + offsetToParameters + 16;
                 uint offsetToParentBoneString = reader.ReadUInt32();
                 reader.BaseStream.Position = offsetToNode + offsetToParameters + 12 + offsetToParentBoneString;
-                entry.ParentBone = ExtensionMethods.ReadCString(reader);
+                string parentBoneName = ExtensionMethods.ReadCString(reader);
 
-                ConnectPoints.Add(entry);
+                Bone ParentBone = Bones.Find(x => x.Name.Equals(parentBoneName));
+                if (ParentBone==null)
+                {
+                    ParentBone = new Bone
+                    {
+                        Name = parentBoneName
+                    };
+                    Bones.Add(ParentBone);
+                }
+
+                ParentBone.ConnectPoints.Add(entry);
 
                 reader.BaseStream.Position = offsetToNode + 32;
                 uint offsetToNextNode = reader.ReadUInt32();
@@ -104,8 +120,59 @@ namespace FcnpTool
 
             writer.WriteZeroes(12);
 
-            uint[] parameterOffsets_offset = new uint[ConnectPoints.Count];
-            uint[] parameterOffsets = new uint[ConnectPoints.Count];
+
+            for (int i = 0; i < Bones.Count; i++)
+            {
+                for (int j = 0; j < Bones[i].ConnectPoints.Count; j++)
+                {
+                    var entry = Bones[i].ConnectPoints[j];
+
+                    if (!Strings.Contains(entry.CnpName))
+                    {
+                        Strings.Add(entry.CnpName);
+                        Hashes_offsets.Add((uint)writer.BaseStream.Position + 4);
+                    }
+
+                    writer.WriteGeoNameHash(entry.CnpName);
+
+                    writer.WriteZeroes(4);
+
+                    writer.WriteZeroes(4);//flags
+
+                    writer.Write(48);//dataoffset
+                    writer.Write(48);//datasize
+
+                    writer.WriteZeroes(8);
+
+                    //previousnodeoffset
+                    if (i > 0)
+                        writer.Write(-96);
+                    else
+                        writer.Write(0);
+
+                    //nextnodeoffset
+                    if (i < Bones[i].ConnectPoints.Count - 1)
+                        writer.Write(96);
+                    else
+                        writer.Write(0);
+
+                    //parameterOffsets_offset[i] = (uint)writer.BaseStream.Position;
+                    writer.WriteZeroes(4);
+
+                    writer.WriteZeroes(8);
+
+                    for (int k = 0; k < 4; k++)
+                        writer.Write(entry.Translation[k]);
+                    for (int k = 0; k < 4; k++)
+                        writer.Write(entry.Rotation[k]);
+                    for (int k = 0; k < 4; k++)
+                        writer.Write(entry.Scale[k]);
+                }
+            }
+            /*
+             * 
+            uint[] parameterOffsets_offset;
+            uint[] parameterOffsets;
 
             //nodes
             for (int i = 0; i < ConnectPoints.Count; i++)
@@ -152,8 +219,8 @@ namespace FcnpTool
                     writer.Write(entry.Rotation[j]);
                 for (int j = 0; j < 4; j++)
                     writer.Write(entry.Scale[j]);
-
             }
+            */
         } //write
     } //class
 } //namespace
